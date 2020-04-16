@@ -7,36 +7,34 @@ eagle_rinit <- "S=1;"
 
 # state transition and set the corresponding parameters for gamma distribution
 eagle_rprocess <- "
-  double shape;
-  double rate;
-  
   if(S==0){
-    S=rbinom(1,1,p0);
+    S=rbinom(1,p0);
   } else{
-    S=rbinom(1,1,p1);
-  }
-  
-  if(S==0){
-    shape=shape0;
-    rate=rate0;
-  } else{
-    shape=shape1;
-    rate=rate1;
+    S=rbinom(1,p1);
   }
 "
+
 
 # gamma distribution
 eagle_rmeasure <- "
-  msa = rgamma(1, shape, rate);
+  if (S==0){
+    msa = rgamma(shape0, scale0);
+  } else{
+    msa = rgamma(shape1, scale1);
+  }
 "
 
 eagle_dmeasure <- "
-  lik = dgamma(msa, shape, rate, give_log);
+  if (S==0){
+    lik = dgamma(msa, shape0, scale0, give_log);
+  } else{
+    lik = dgamma(msa, shape1, scale1, give_log);
+  }
 "
 
 eagle_statenames <- c("S")
 
-eagle_paramnames <- c("p0", "p1", "shape0", "rate0", "shape1", "rate1")
+eagle_paramnames <- c("p0", "p1", "shape0", "scale0", "shape1", "scale1")
 
 eagle_data <- read.csv("https://raw.githubusercontent.com/skybullbobby/Time-Series-Final-Project/master/eagle_421.csv")
 
@@ -48,7 +46,7 @@ eagle_0 <- pomp(
   rmeasure=Csnippet(eagle_rmeasure),
   dmeasure=Csnippet(eagle_dmeasure),
   partrans=parameter_trans(
-    log=c("shape0", "rate0", "shape1", "rate1"),
+    log=c("shape0", "scale0", "shape1", "scale1"),
     logit=c("p0", "p1")),
   statenames=eagle_statenames,
   paramnames=eagle_paramnames,

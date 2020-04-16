@@ -24,4 +24,4 @@ data422 = data %>% filter(date_time=="2013-04-22")
 data423 = data %>% filter(date_time=="2013-04-23")
 data424 = data %>% filter(date_time=="2013-04-24")
 
-write.csv(data421, file="eagle_421.csv", row.names = FALSE)
+write.csv(data421, file="eagle_421.csv")

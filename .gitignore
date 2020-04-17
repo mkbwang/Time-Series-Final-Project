@@ -1,4 +1,6 @@
 .Rhistory
 *.rda
 finished_models/
+*.out
+
 

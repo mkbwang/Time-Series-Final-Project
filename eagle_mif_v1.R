@@ -10,7 +10,7 @@ setwd(getwd())
 
 source("eagle_model_v1.R")
 
-run_level <- 1
+run_level <- 2
 switch(run_level, {
   eagle_Np=100; eagle_Nmif=10; eagle_Neval=10;
   eagle_Nglobal=10; eagle_Nlocal=10

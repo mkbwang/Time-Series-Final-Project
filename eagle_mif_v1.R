@@ -24,12 +24,12 @@ switch(run_level, {
 
 # set starting parameters for local search
 
-fit.gamma <- fitdist(eagle_data$msa, distr = "gamma", method = "mle")
-startshape <- fit.gamma$estimate[[1]]
-startscale <- 1/fit.gamma$estimate[[2]] 
-
-eagle_startval <- c(p0=0.6, p1=0.4, shape0=startshape, scale0=startscale,
-                    shape1=startshape, scale1=startscale)
+# fit.gamma <- fitdist(eagle_data$msa, distr = "gamma", method = "mle")
+# startshape <- fit.gamma$estimate[[1]]
+# startscale <- 1/fit.gamma$estimate[[2]] 
+# 
+# eagle_startval <- c(p0=0.6, p1=0.4, shape0=startshape, scale0=startscale,
+#                     shape1=startshape, scale1=startscale)
 
 # box for global search
 eagle_box <- rbind(

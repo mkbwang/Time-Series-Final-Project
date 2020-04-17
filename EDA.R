@@ -2,8 +2,6 @@ library(ggplot2)
 library(lubridate)
 library(fitdistrplus)
 
-# exploring data
-data$timepoint = as.POSIXct(data$timepoint)
 
 # plot the data
 data = read.csv("https://raw.githubusercontent.com/skybullbobby/Time-Series-Final-Project/master/eagle_421.csv")

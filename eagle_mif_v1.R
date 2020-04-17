@@ -10,7 +10,7 @@ setwd(getwd())
 
 source("eagle_model_v1.R")
 
-run_level <- 2
+run_level <- 1
 switch(run_level, {
   eagle_Np=100; eagle_Nmif=10; eagle_Neval=10;
   eagle_Nglobal=10; eagle_Nlocal=10
@@ -47,7 +47,11 @@ eagle_rw.sd <- 0.02; eagle_cooling.fraction.50 <- 0.5
 stew(file=sprintf("global_search-v1-%d.rda",run_level),{
   t_global <- system.time({
     mifs_global <- foreach(i=1:eagle_Nglobal,
-                          .packages='pomp', .combine=c) %dopar%  {
+                          .packages='pomp', .combine=c,
+                          .inorder=FALSE,
+                          .options.multicore=list(set.seed=TRUE),
+                          .export=c("eagle_0", "eagle_box", "eagle_Np", "eagle_Nmif",
+                                    "eagle_cooling.fraction.50", "eagle_rw.sd")) %dopar%  {
                             mif2(eagle_0,
                                  params=apply(eagle_box,1,function(x)exp(runif(1,x[1],x[2]))),
                                  Np=eagle_Np,
@@ -70,7 +74,10 @@ stew(file=sprintf("global_search-v1-%d.rda",run_level),{
 stew(file=sprintf("lik_global_eval-v1-%d.rda",run_level),{
   t_global_eval <- system.time({
     liks_global <- foreach(i=1:eagle_Nglobal,
-                           .combine=rbind, .packages='pomp') %dopar% {
+                           .combine=rbind, .packages='pomp',
+                           .inorder=FALSE,
+                           .options.multicore=list(set.seed=TRUE),
+                           .export=c("eagle_Neval", "eagle_0", "mifs_global", "eagle_Np")) %dopar% {
                              evals <- replicate(eagle_Neval,
                                                 logLik(pfilter(eagle_0,
                                                                params=coef(mifs_global[[i]]),Np=eagle_Np)))
@@ -78,3 +85,4 @@ stew(file=sprintf("lik_global_eval-v1-%d.rda",run_level),{
                            }
   })
 },seed=56789,kind="L'Ecuyer")
+

@@ -1,4 +1,6 @@
 library(pomp)
+library(fitdistrplus)
+
 
 setwd(getwd())
 
@@ -36,7 +38,7 @@ eagle_statenames <- c("S")
 
 eagle_paramnames <- c("p0", "p1", "shape0", "scale0", "shape1", "scale1")
 
-eagle_data <- read.csv("https://raw.githubusercontent.com/skybullbobby/Time-Series-Final-Project/master/eagle_421.csv")
+eagle_data <- read.csv("eagle_421.csv")
 
 eagle_0 <- pomp(
   data=subset(eagle_data,select=c(timestamp, msa)),

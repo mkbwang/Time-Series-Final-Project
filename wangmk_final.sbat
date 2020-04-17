@@ -1,0 +1,25 @@
+#!/bin/bash
+
+#SBATCH --job-name="wangmk_final_task1"
+#SBATCH --mail-type=BEGIN,END,FAIL
+ 
+#SBATCH --account=stats531w20_class
+#SBATCH --partition=standard
+
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=6
+#SBATCH --cpus-per-task=3
+#SBATCH --mem-per-cpu=200MB
+#SBATCH --time=5:00:00
+
+###   Load software modules
+
+module load R
+module list
+
+####  Commands your job should run follow this line
+
+echo "Running on $SLURM_JOB_NODELIST"
+echo "Running in $(pwd)"
+
+R CMD BATCH --no-restore --no-save --quiet eagle_mif_v1.R eagle_mif_v1.out

@@ -24,7 +24,7 @@ switch(run_level, {
 
 # set starting parameters for local search
 
-fit.gamma <- fitdist(data$msa, distr = "gamma", method = "mle")
+fit.gamma <- fitdist(eagle_data$msa, distr = "gamma", method = "mle")
 startshape <- fit.gamma$estimate[[1]]
 startscale <- 1/fit.gamma$estimate[[2]] 
 

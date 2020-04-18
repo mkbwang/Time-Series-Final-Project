@@ -16,7 +16,7 @@ switch(run_level, {
   eagle_Nglobal=10; eagle_Nlocal=10
 },{
   eagle_Np=30000; eagle_Nmif=150; eagle_Neval=10;
-  eagle_Nglobal=30; eagle_Nlocal=10
+  eagle_Nglobal=50; eagle_Nlocal=10
 },{
   eagle_Np=60000; eagle_Nmif=300; eagle_Neval=10;
   eagle_Nglobal=100; eagle_Nlocal=20}

@@ -48,7 +48,7 @@ eagle_data <- read.csv("eagle_421.csv")
 eagle_1 <- pomp(
   data=subset(eagle_data,select=c(timestamp, msa)),
   times="timestamp",
-  t0=1,
+  t0=0,
   rprocess=discrete_time(Csnippet(eagle_rprocess),delta.t=1),
   rmeasure=Csnippet(eagle_rmeasure),
   dmeasure=Csnippet(eagle_dmeasure),

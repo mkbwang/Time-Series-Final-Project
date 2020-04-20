@@ -15,7 +15,7 @@ switch(run_level, {
   eagle_Np=100; eagle_Nmif=10; eagle_Neval=10;
   eagle_Nglobal=10; eagle_Nlocal=10
 },{
-  eagle_Np=30000; eagle_Nmif=150; eagle_Neval=10;
+  eagle_Np=20000; eagle_Nmif=150; eagle_Neval=10;
   eagle_Nglobal=50; eagle_Nlocal=10
 },{
   eagle_Np=60000; eagle_Nmif=300; eagle_Neval=10;
@@ -51,9 +51,9 @@ eagle_box_s <- rbind(
 eagle_rw.sd <- 0.02; eagle_cooling.fraction.50 <- 0.6
 
 # Iterative filtering
-stew(file=sprintf("global_search-v2-%d.rda",run_level),{
+stew(file=sprintf("global_search_nocovar_mix-%d.rda",run_level),{
   t_global <- system.time({
-    mifs_global <- foreach(i=1:eagle_Nglobal,
+    mifs_global_nocovar_mix <- foreach(i=1:eagle_Nglobal,
                            .packages='pomp', .combine=c,
                            .inorder=FALSE,
                            .options.multicore=list(set.seed=TRUE),
@@ -82,16 +82,16 @@ stew(file=sprintf("global_search-v2-%d.rda",run_level),{
 
 
 # log likelihood
-stew(file=sprintf("lik_global_eval-v2-%d.rda",run_level),{
+stew(file=sprintf("lik_global_eval_nocovar_mix-%d.rda",run_level),{
   t_global_eval <- system.time({
-    liks_global <- foreach(i=1:eagle_Nglobal,
+    liks_global_nocovar_mix <- foreach(i=1:eagle_Nglobal,
                            .combine=rbind, .packages='pomp',
                            .inorder=FALSE,
                            .options.multicore=list(set.seed=TRUE),
-                           .export=c("eagle_Neval", "eagle_1", "mifs_global", "eagle_Np")) %dopar% {
+                           .export=c("eagle_Neval", "eagle_1", "mifs_global_nocovar_mix", "eagle_Np")) %dopar% {
                              evals <- replicate(eagle_Neval,
                                                 logLik(pfilter(eagle_1,
-                                                               params=coef(mifs_global[[i]]),Np=eagle_Np)))
+                                                               params=coef(mifs_global_nocovar_mix[[i]]),Np=eagle_Np)))
                              logmeanexp(evals, se=TRUE)
                            }
   })

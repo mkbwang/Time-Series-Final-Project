@@ -2,5 +2,6 @@
 *.rda
 finished_models/
 *.out
+report/*.rda
 
 

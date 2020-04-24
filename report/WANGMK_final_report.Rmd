@@ -1,0 +1,160 @@
+---
+title: "Analyze Eagle Activity using Hidden Markov Models"
+author: "Mukai Wang 98830336"
+date: "4/23/2020"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(pomp)
+library(knitr)
+library(ggplot2)
+library(fitdistrplus)
+setwd(getwd())
+```
+
+# Introduction
+
+This final project is a replication of a previous research paper which took advantage of hidden markov models. The article's title is "Analysis of animal accelerometer data using hidden Markov Models". Using accelerometer to capture animals' motion is a prevalent way to keep track of animal behaviour. The measured data, usually called minimum specific acceleration(MSA), can directly indicate the instant activeness of the animal. The larger the MSA is, the probable that the animal is in an active state. I am going to use one of the dataset from this research article to experiment hidden Markov models and sketch out the activeness of an Verreaux eagle throughout a day.
+
+# Data and Model Background
+
+According to the article, an Verreaux eagle(simplified as "eagle" below) was tracked for 9 days from 04/16 to 04/24. On each day data were collected from about 8am to 8pm, with a time interval of about one and a half minutes between two adjacent timepoints. Therefore each time series from different days are independent of each other.
+
+According to the article, the authors presume that there are two hidden states (active and inactive). Within the active state, the MSA follows a gamma distribution. Within the inactive state, the MSA follows a mixture of two gamma distributions. Gamma distribution is a simple and ideal disribution to describe a set of points that are mostly small with a handful of extremely large points. The authors decide to use a mixture of gamma distributions for the inactive state because the eagle could be either gliding at a low speed or it could be roosting.
+
+Since there are only two states, the state transition can be represented by a 2 by 2 probability matrix. In the dataset the authors also collected the wind speed and temperature for each time point. They believed that the transitional probability can be fitted by a logistic regression with wind speed, temperature and their interaction.
+
+# Analysis Scheme
+
+## Model Assumption
+Because of the time constraint, I decide to carry out analysis only on data points collect on a single day. Since there are the most number of data points on 04/21 (235). My plan is to fit seven POMP models, compare their likelihood, then interpret the one with the best fit.
+
+First I plan to just fit a gamma distribution on the 235 data points.
+
+The second model I want to fit is the simplest POMP model. It has a transitional probability matrix which is a constant.
+$$
+\begin{bmatrix}
+1-p_{0} & p_{0}\\
+1-p_{1} & p_{1}
+\end{bmatrix}
+$$
+$p_{0}$ represents the probability of the eagle changing from inactive state to active state $p_{1}$ represents the probability of the eagle staying in the active state. Within each state the MSA follows its own gamma distribution
+$$
+\begin{aligned}
+\text{MSA} \stackrel{\text{inactive}}{\sim} Gamma(\text{shape0}, \text{scale0})\\
+\text{MSA} \stackrel{\text{active}}{\sim} Gamma(\text{shape1}, \text{scale1})
+\end{aligned}
+$$
+
+The third model is similar, but differs from the second model in that the measurement distribution of the inactive state is a mixture of two gamma distributions
+
+$$
+\text{MSA} \stackrel{\text{inactive}}{\sim} p_{mix}\times Gamma(\text{shape01}, \text{scale01})+(1-p_{mix})\times Gamma(\text{shape02}, \text{scale02})
+$$
+
+The fourth model adds to the third model by making the transitional probability follow a logistic regression with wind speed as a covariate, namely
+
+$$
+\begin{aligned}
+\text{logit}(p_{0})\sim \beta_{00}+\beta_{01}\text{wind}\\
+\text{logit}(p_{1})\sim \beta_{10}+\beta_{11}\text{wind}
+\end{aligned}
+$$
+
+The fifth model has the logistic regression based on temperature
+
+$$
+\begin{aligned}
+\text{logit}(p_{0})\sim \beta_{00}+\beta_{02}\text{temperature}\\
+\text{logit}(p_{1})\sim \beta_{10}+\beta_{12}\text{temperature}
+\end{aligned}
+$$
+
+The sixth model has the logistic regression based on the main effects of both wind speed and temperature
+
+$$
+\begin{aligned}
+\text{logit}(p_{0})\sim \beta_{00}+\beta_{01}\text{wind}+\beta_{02}\text{temperature}\\
+\text{logit}(p_{1})\sim \beta_{10}+\beta_{11}\text{wind}+\beta_{12}\text{temperature}
+\end{aligned}
+$$
+
+The seventh model is the full model with both covariates and their interaction term
+
+$$
+\begin{aligned}
+\text{logit}(p_{0})\sim \beta_{00}+\beta_{01}\text{wind}+\beta_{02}\text{temperature}+\beta_{03}\text{temperature}\times \text{wind}\\
+\text{logit}(p_{1})\sim \beta_{10}+\beta_{11}\text{wind}+\beta_{12}\text{temperature}+\beta_{13}\text{temperature}\times \text{wind}
+\end{aligned}
+$$
+
+## Computation
+
+The fitting of the POMP models are based on the pomp package for R. Specifically I am using the iterated particle filtering algorithm to estimate the parameters. Because of the limitation of time, after I fit the third model and get the parameters of the measurement model, I set them as constant when fitting further models. I take this approach because I am not particularly interested in the parameters of the gamma distributions. This approach can also increase the efficiency of the algorithm given that there are fewer parameters that it needs to optimize. 
+
+# Results
+
+## Exploratory Data Analysis
+
+First I plot the raw data and its autocorrelation for different lags. 
+```{r}
+eagle_data = read.csv("eagle_421.csv")
+ggplot(eagle_data, aes(x=timestamp, y=msa))+geom_line()+
+  xlab("Time Point")+ylab("Minimum Specific Acceleration(MSA)")
+```
+
+```{r}
+acf(eagle_data$msa, main="MSA")
+```
+
+There is significant autocorrelation at small lags, which indicates that a POMP model could fit the data well.
+
+## Log Likelihood Results
+
+I summarize the log likelihoods of all the models in the table below. 
+
+```{r}
+simplegamma <- fitdist(eagle_data$msa, distr = "gamma", method = "mle")
+model1lik <- simplegamma$loglik
+
+load("result_nocovar_nomix.rda")
+model2lik <- max(liks_global_nocovar_nomix)
+
+load("result_nocovar_mix.rda")
+model3lik <- max(liks_global_nocovar_mix)
+
+load("global_search_covar1_mix-2.rda")
+load("lik_global_eval_covar1_mix-2.rda")
+model4lik <- max(liks_global_covar1_mix)
+
+load("global_search_covar2_mix-2.rda")
+load("lik_global_eval_covar2_mix-2.rda")
+model5lik <- max(liks_global_covar2_mix)
+
+load("global_search_covar3_mix-2.rda")
+load("lik_global_eval_covar3_mix-2.rda")
+model6lik <- max(liks_global_covar3_mix)
+
+load("global_search_covar4_mix-2.rda")
+load("lik_global_eval_covar4_mix-2.rda")
+model7lik <- max(liks_global_covar4_mix)
+
+myliks <- c(model1lik,model2lik,model3lik,model4lik,
+            model5lik,model6lik,model7lik)
+param_num <- c(2, 6, 9, 11, 13, 15, 17)
+paperliks <- c(NA, NA, 2000.2, 2001.9, 2010.4, 2011.6, 2017.0)
+
+resulttable <- data.frame(cbind(param_num,myliks,  paperliks))
+
+colnames(resulttable) <- c("Number of Parameters", "Log Likelihood", "Results from Article")
+rownames(resulttable) <- paste0("Model ",seq(1,7))
+kable(resulttable, digits=2)
+```
+
+
+# Discussion
+

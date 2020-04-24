@@ -1,0 +1,28 @@
+---
+title: "Analyze Eagle Activity using Hidden Markov Models"
+author: "Mukai Wang 98830336"
+date: "4/23/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+This final project is a replication of a previous research paper which took advantage of hidden markov models. The article's title is "Analysis of animal accelerometer data using hidden Markov Models". Using accelerometer to capture animals' motion is a prevalent way to keep track of animal behaviour. The measured data, usually called minimum specific acceleration(MSA), can directly indicate the instant activeness of the animal. The larger the MSA is, the probable that the animal is in an active state. I am going to use one of the dataset from this research article to experiment hidden Markov models and sketch out the activeness of an Verreaux eagle throughout a day.
+
+# Data and Model Background
+
+According to the article, an Verreaux eagle(simplified as "eagle" below) was tracked for 9 days from 04/16 to 04/24. On each day data were collected from about 8am to 8pm, with a time interval of about one and a half minutes between two adjacent timepoints. 
+
+# Analysis Scheme
+
+
+# Results
+
+
+
+# Discussion
+

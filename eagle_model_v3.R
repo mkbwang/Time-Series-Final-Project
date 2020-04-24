@@ -8,6 +8,8 @@ eagle_data <- read.csv("eagle_421.csv")
 eagle_covar <- covariate_table(
   timestamp = eagle_data$timestamp,
   wind = eagle_data$wind_speed,
+  temp = eagle_data$saws_temp,
+  wind_temp = eagle_data$wind_temp,
   times= "timestamp"
 )
 
@@ -18,10 +20,10 @@ eagle_rinit <- "S=1;"
 # state transition and set the corresponding parameters for gamma distribution
 eagle_rprocess <- "
   if(S==0){
-    double p0 = exp(beta00+beta01*wind)/(1+exp(beta00+beta01*wind));
+    double p0 = exp(beta00+beta01*wind+beta02*temp+beta03*wind_temp)/(1+exp(beta00+beta01*wind+beta02*temp+beta03*wind_temp));
     S=rbinom(1,p0);
   } else{
-    double p1 = exp(beta10+beta11*wind)/(1+exp(beta10+beta11*wind));
+    double p1 = exp(beta10+beta11*wind+beta12*temp+beta13*wind_temp)/(1+exp(beta10+beta11*wind+beta12*temp+beta13*wind_temp));
     S=rbinom(1,p1);
   }
 "
@@ -50,7 +52,8 @@ eagle_dmeasure <- "
 
 eagle_statenames <- c("S")
 
-eagle_paramnames <- c("beta00", "beta01", "beta10", "beta11", "pmix", "shape01", "scale01", 
+eagle_paramnames <- c("beta00", "beta01", "beta02", "beta03", "beta10", "beta11", "beta12", 
+                      "beta13", "pmix", "shape01", "scale01", 
                       "shape02", "scale02", "shape1", "scale1")
 
 

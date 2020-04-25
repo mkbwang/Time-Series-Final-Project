@@ -3,8 +3,7 @@ title: "Analyze Eagle Activity using Hidden Markov Models"
 author: "Mukai Wang 98830336"
 date: "4/23/2020"
 output:
-  pdf_document: default
-  html_document:
+  html_document: 
     df_print: paged
 ---
 
@@ -121,31 +120,8 @@ There is significant autocorrelation at small lags, which indicates that a POMP 
 I summarize the log likelihoods of all the models in the table below. 
 
 ```{r}
-simplegamma <- fitdist(eagle_data$msa, distr = "gamma", method = "mle")
-model1lik <- simplegamma$loglik
 
-load("result_nocovar_nomix.rda")
-model2lik <- max(liks_global_nocovar_nomix)
-
-load("result_nocovar_mix.rda")
-model3lik <- max(liks_global_nocovar_mix)
-
-load("global_search_covar1_mix-2.rda")
-load("lik_global_eval_covar1_mix-2.rda")
-model4lik <- max(liks_global_covar1_mix)
-
-load("global_search_covar2_mix-2.rda")
-load("lik_global_eval_covar2_mix-2.rda")
-model5lik <- max(liks_global_covar2_mix)
-
-load("global_search_covar3_mix-2.rda")
-load("lik_global_eval_covar3_mix-2.rda")
-model6lik <- max(liks_global_covar3_mix)
-
-load("global_search_covar4_mix-2.rda")
-load("lik_global_eval_covar4_mix-2.rda")
-model7lik <- max(liks_global_covar4_mix)
-
+load("likelihoods.rda")
 myliks <- c(model1lik,model2lik,model3lik,model4lik,
             model5lik,model6lik,model7lik)
 param_num <- c(2, 6, 9, 11, 13, 15, 17)
@@ -165,17 +141,17 @@ It's worth noting that the log likelihood from the article is calculated based o
 To evaluate the model diagnostics, I decide to offer the convergence diagnostics plots for model 3 and model 4. Recall that I use model 3 to decide the parameters for the measurement model and I used model 4 to decide the rest of the parameters for the transitional probability matrix.
 
 First I offer the diagnostics plots for model 3, which is the POMP model without covariates.
-```{r}
-plot(mif_nocovar_mix)
-```
+
+![mifnocovar1](mif_nocovar_mix_1.png)
+![mifnocovar2](mif_nocovar_mix_2.png)
+![mifnocovar3](mif_nocovar_mix_3.png)
 
 All the iterative filtering trials converge, yet they converge to several distinct parameter sets. Given the time constraint, I took a heuristic and decide to pick the parameter sets based on two standards. The first standard is that the mean of the gamma distribution corresponding to my presumed active state should be higher than the mean values of the gamma distributions corresponding to my presumed inactive states. The second standard is high log likelihood. Luckily after I investigate all the filtering trials, the one with the highest log likelihood meets both my standards. Therefore I go ahead with this set of parameters.
 
 Next is the diagnostics plot for model 4, which is the optimal model that I select.
 
-```{r}
-plot(mifs_global_covar1_mix)
-```
+![mif_covar_mix_1](mif_covar1_mix_1.png)
+![mif_covar_mix_2](mif_covar1_mix_2.png)
 
 All the iterative filtering trials converge to a single set of parameters, indicating that the model is stable.
 
@@ -183,11 +159,16 @@ We can also visually checkout the goodness of fit by simulating several time ser
 
 ```{r}
 source("selected_model.R")
-selected_params = coef(mifs_global_covar1_mix)[,which.max(liks_global_covar1_mix)]
+selected_params = read.csv("final_params.csv")
+
+paramnames = selected_params$X
+paramvalues = selected_params$x
+names(paramvalues) = paramnames
+
 
 set.seed(10)
 
-sims <- simulate(eagle_2, params=selected_params, 
+sims <- simulate(eagle_2, params=paramvalues, 
                  nsim=4, format="data.frame", include=TRUE, t0=1)
 ggplot(sims,mapping=aes(x=timestamp,y=msa,color=.id=="data"))+
   geom_line()+guides(color=FALSE)+facet_grid(rows=vars(.id))
@@ -232,12 +213,12 @@ It would be more illustrative with some plots. Inspired by the article, I plot t
 windspeed = seq(0, 6, 0.1)
 
 stay0 = function(windspeed){
-  loddsstay = -(selected_params["beta00"]+selected_params["beta01"]*windspeed)
+  loddsstay = -(paramvalues["beta00"]+paramvalues["beta01"]*windspeed)
   exp(loddsstay)/(1+exp(loddsstay))
 }
 
 stay1 = function(windspeed){
-  loddsstay = (selected_params["beta10"]+selected_params["beta11"]*windspeed)
+  loddsstay = (paramvalues["beta10"]+paramvalues["beta11"]*windspeed)
   exp(loddsstay)/(1+exp(loddsstay))
 }
 

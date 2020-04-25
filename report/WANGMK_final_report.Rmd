@@ -155,6 +155,102 @@ rownames(resulttable) <- paste0("Model ",seq(1,7))
 kable(resulttable, digits=2)
 ```
 
+It's worth noting that the log likelihood from the article is calculated based on the data from all seven days, therefore it's much larger than my log likelihood calculated from a single day. After comparing the log likelihoods, I conclude that model 4 is the optimal model. Model 4 assumes that the transitional probability between hidden states can be fitted by a logistic regression with wind speed as the only covariate.
+
+## Model Diagnostics
+
+To evaluate the model diagnostics, I decide to offer the convergence diagnostics plots for model 3 and model 4. Recall that I used model 3 to decide the parameters for the measurement model and I used model 4 to decide the rest of the parameters for the transitional probability matrix.
+
+First I offer the diagnostics plots for model 3, which is the POMP model without covariates.
+```{r}
+plot(mif_nocovar_mix)
+```
+
+All the iterative filtering trials converge, yet they converge to several distinct parameter sets. Given the time constraint, I took a heuristic and decide to pick the parameter sets based on two standards. The first standard is that the mean of the gamma distribution corresponding to my presumed active state should be higher than the mean values of the gamma distributions corresponding to my presumed inactive states. The second standard is high log likelihood. Luckily after I investigate all the filtering trials, the one with the highest log likelihood meets both my standards. Therefore I go ahead with this set of parameters.
+
+Next is the diagnostics plot for model 4, which is the optimal model that I select.
+
+```{r}
+plot(mifs_global_covar1_mix)
+```
+
+All the iterative filtering trials converge to a single set of parameters, indicating that the model is stable.
+
+We can also visually checkout the goodness of fit by simulating several time series using the selected model.
+
+```{r}
+source("selected_model.R")
+selected_params = coef(mifs_global_covar1_mix)[,which.max(liks_global_covar1_mix)]
+
+set.seed(10)
+
+sims <- simulate(eagle_2, params=selected_params, 
+                 nsim=4, format="data.frame", include=TRUE, t0=1)
+ggplot(sims,mapping=aes(x=timestamp,y=msa,color=.id=="data"))+
+  geom_line()+guides(color=FALSE)+facet_grid(rows=vars(.id))
+```
+
+Because of the unpredictability of the eagle's activity, the shape of my time series cannot match the eagle's exactly, but the overall trends are the same. Most of the time the acceleration is small, but occsasionally there are high peaks.
+
+## Interpretation
+
+The selected parameter is
+
+```{r}
+kable(selected_params)
+```
+
+This set of parameters tell us that
+$$
+\text{log odds}(p_{\text{inactive}\rightarrow \text{active}})=-2.87+0.14\times \text{wind}
+$$
+
+$$
+\text{log odds}(p_{\text{active}\rightarrow \text{active}})=-1.73+1.32\times \text{wind}
+$$
+
+Within the active state, the MSA follows
+$$
+MSA\sim Gamma(\text{shape}=1.066, \text{scale}=0.356)
+$$
+
+Within the inactive state, the MSA follows a mixture of
+
+$$
+\begin{aligned}
+MSA\sim Gamma(\text{shape}=20.51, \text{scale}=6.96\times 10^{-4})\\
+MSA\sim Gamma(\text{shape}=2.972, \text{scale}=0.0091)
+\end{aligned}
+$$
+
+It would be more illustrative with some plots. Inspired by the article, I plot the probability of the eagle staying in its original state against the wind speed.
+
+```{r}
+windspeed = seq(0, 6, 0.1)
+
+stay0 = function(windspeed){
+  loddsstay = -(selected_params["beta00"]+selected_params["beta01"]*windspeed)
+  exp(loddsstay)/(1+exp(loddsstay))
+}
+
+stay1 = function(windspeed){
+  loddsstay = (selected_params["beta10"]+selected_params["beta11"]*windspeed)
+  exp(loddsstay)/(1+exp(loddsstay))
+}
+
+prob0 = stay0(windspeed)
+prob1 = stay1(windspeed) 
+
+tpm = data.frame(Probability = c(prob0, prob1),
+                 State = rep(c("Active", "Inactive"), c(61,61)),
+                 Windspeed = c(windspeed, windspeed))
+```
+
+
+
 
 # Discussion
+
+
+
 

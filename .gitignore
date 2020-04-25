@@ -3,5 +3,5 @@
 finished_models/
 *.out
 report/*.rda
-
+report/*.html
 

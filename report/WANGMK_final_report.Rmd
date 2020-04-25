@@ -3,6 +3,7 @@ title: "Analyze Eagle Activity using Hidden Markov Models"
 author: "Mukai Wang 98830336"
 date: "4/23/2020"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 ---
@@ -13,20 +14,22 @@ library(pomp)
 library(knitr)
 library(ggplot2)
 library(fitdistrplus)
+library(doParallel)
+library(reshape2)
 setwd(getwd())
 ```
 
 # Introduction
 
-This final project is a replication of a previous research paper which took advantage of hidden markov models. The article's title is "Analysis of animal accelerometer data using hidden Markov Models". Using accelerometer to capture animals' motion is a prevalent way to keep track of animal behaviour. The measured data, usually called minimum specific acceleration(MSA), can directly indicate the instant activeness of the animal. The larger the MSA is, the probable that the animal is in an active state. I am going to use one of the dataset from this research article to experiment hidden Markov models and sketch out the activeness of an Verreaux eagle throughout a day.
+This final project is a replication of a previous research paper which took advantage of hidden markov models. The article's title is "Analysis of animal accelerometer data using hidden Markov Models"[2]. Using accelerometer to capture animals' motion is a prevalent way to keep track of animal behaviour. The measured data, usually called minimum specific acceleration(MSA), can directly indicate the instant activeness of the animal[2]. The larger the MSA is, the probable that the animal is in an active state[2]. I am going to use one of the dataset from this research article to experiment hidden Markov models and sketch out the activeness of an Verreaux eagle throughout a day.
 
 # Data and Model Background
 
-According to the article, an Verreaux eagle(simplified as "eagle" below) was tracked for 9 days from 04/16 to 04/24. On each day data were collected from about 8am to 8pm, with a time interval of about one and a half minutes between two adjacent timepoints. Therefore each time series from different days are independent of each other.
+According to the article, an Verreaux eagle(simplified as "eagle" below) was tracked for 9 days from 04/16 to 04/24 [1][2]. On each day data were collected from about 8am to 8pm, with a time interval of about one and a half minutes between two adjacent timepoints. Therefore each time series from different days were independent of each other[2].
 
-According to the article, the authors presume that there are two hidden states (active and inactive). Within the active state, the MSA follows a gamma distribution. Within the inactive state, the MSA follows a mixture of two gamma distributions. Gamma distribution is a simple and ideal disribution to describe a set of points that are mostly small with a handful of extremely large points. The authors decide to use a mixture of gamma distributions for the inactive state because the eagle could be either gliding at a low speed or it could be roosting.
+According to the article, the authors presumed that there are two hidden states (active and inactive)[2]. Within the active state, the MSA follows a gamma distribution. Within the inactive state, the MSA follows a mixture of two gamma distributions[2]. Gamma distribution is a simple and ideal disribution to describe a set of points that are mostly small with a handful of extremely large points. The authors decided to use a mixture of gamma distributions for the inactive state because the eagle could be either gliding at a low speed or it could be roosting[2].
 
-Since there are only two states, the state transition can be represented by a 2 by 2 probability matrix. In the dataset the authors also collected the wind speed and temperature for each time point. They believed that the transitional probability can be fitted by a logistic regression with wind speed, temperature and their interaction.
+Since there are only two states, the state transition can be represented by a 2 by 2 probability matrix. In the dataset the authors also collected the wind speed and temperature for each time point. They believed that the transitional probability can be fitted by a logistic regression with wind speed, temperature and their interaction[2].
 
 # Analysis Scheme
 
@@ -38,8 +41,8 @@ First I plan to just fit a gamma distribution on the 235 data points.
 The second model I want to fit is the simplest POMP model. It has a transitional probability matrix which is a constant.
 $$
 \begin{bmatrix}
-1-p_{0} & p_{0}\\
-1-p_{1} & p_{1}
+1-p_{0} & 1-p_{1}\\
+p_{0} & p_{1}
 \end{bmatrix}
 $$
 $p_{0}$ represents the probability of the eagle changing from inactive state to active state $p_{1}$ represents the probability of the eagle staying in the active state. Within each state the MSA follows its own gamma distribution
@@ -94,7 +97,7 @@ $$
 
 ## Computation
 
-The fitting of the POMP models are based on the pomp package for R. Specifically I am using the iterated particle filtering algorithm to estimate the parameters. Because of the limitation of time, after I fit the third model and get the parameters of the measurement model, I set them as constant when fitting further models. I take this approach because I am not particularly interested in the parameters of the gamma distributions. This approach can also increase the efficiency of the algorithm given that there are fewer parameters that it needs to optimize. 
+The fitting of the POMP models are based on the pomp package for R[4][6]. Specifically I am using the iterated particle filtering algorithm to estimate the parameters[4][6]. Because of the limitation of time, after I fit the third model and get the parameters of the measurement model, I set them as constant when fitting further models. I take this approach because I am not particularly interested in the parameters of the gamma distributions. This approach can also increase the efficiency of the algorithm given that there are fewer parameters that it needs to optimize. 
 
 # Results
 
@@ -155,11 +158,11 @@ rownames(resulttable) <- paste0("Model ",seq(1,7))
 kable(resulttable, digits=2)
 ```
 
-It's worth noting that the log likelihood from the article is calculated based on the data from all seven days, therefore it's much larger than my log likelihood calculated from a single day. After comparing the log likelihoods, I conclude that model 4 is the optimal model. Model 4 assumes that the transitional probability between hidden states can be fitted by a logistic regression with wind speed as the only covariate.
+It's worth noting that the log likelihood from the article is calculated based on the data from all nine days, therefore it's much larger than my log likelihood calculated from a single day. After comparing the log likelihoods, I conclude that model 4 is the optimal model. Model 4 assumes that the transitional probability between hidden states can be fitted by a logistic regression with wind speed as the only covariate.
 
 ## Model Diagnostics
 
-To evaluate the model diagnostics, I decide to offer the convergence diagnostics plots for model 3 and model 4. Recall that I used model 3 to decide the parameters for the measurement model and I used model 4 to decide the rest of the parameters for the transitional probability matrix.
+To evaluate the model diagnostics, I decide to offer the convergence diagnostics plots for model 3 and model 4. Recall that I use model 3 to decide the parameters for the measurement model and I used model 4 to decide the rest of the parameters for the transitional probability matrix.
 
 First I offer the diagnostics plots for model 3, which is the POMP model without covariates.
 ```{r}
@@ -242,15 +245,104 @@ prob0 = stay0(windspeed)
 prob1 = stay1(windspeed) 
 
 tpm = data.frame(Probability = c(prob0, prob1),
-                 State = rep(c("Active", "Inactive"), c(61,61)),
+                 State = rep(c("Inactive", "Active"), c(61,61)),
                  Windspeed = c(windspeed, windspeed))
 ```
 
 
+```{r}
+ggplot(tpm, aes(x=Windspeed, y=Probability))+geom_line(aes(color=State))+
+  xlab("Wind Speed(m/s)")+ylab("Probability of staying in Original State")
+```
 
+We can see that as the wind speed increases, the probability of the eagle switching from inactive state to active state will gradually decrease from about 0.95. The eagle rarely stays in active state for a prolonged period of time, but the probability of staying in active state will drastically increase when the wind speed increases. It is encouraging to see that this plot is very similar to the one in the original article[2], which indicates that my model fitting is successful.
+
+I can also calculate the stationary distribution of two states under wind speed. The algorithm can be found [7].
+
+```{r}
+stationary = function(windspeed){
+  prob0 = stay0(windspeed)
+  prob1 = stay1(windspeed) 
+  tpm = matrix(c(prob0,  1-prob0, 1-prob1,prob1), nrow=2)
+  eigenresult = eigen(tpm)
+  eigenresult$vectors[,1,drop=FALSE]
+}
+
+
+set.seed(2020,kind="L'Ecuyer")
+cores <-  as.numeric(Sys.getenv('SLURM_NTASKS_PER_NODE', unset='4'))
+registerDoParallel(cores)
+statprob = foreach(ws=windspeed, .combine=cbind) %dopar% {
+  stationary(ws)
+}
+
+statprob = abs(t(statprob))
+
+completeprob = cbind(as.data.frame(statprob), windspeed)
+colnames(completeprob)[1:2] = c("Inactive", "Active")
+completeprob = melt(completeprob, id="windspeed", value.name="Probability")
+colnames(completeprob)[2]="State"
+
+ggplot(completeprob, aes(x=windspeed, y=Probability))+
+  geom_line(aes(color=State))+xlab("Wind Speed(m/s)")+ylab("Stationary Distribution")
+```
+
+It's not surprising that the eagle will mostly stay in inactive state when the wind speed is low and it will mostly stay in active state when the wind speed is high. This plot also resembles the one in the original article[2].
+
+
+## Comparison with ARIMA model
+
+Recall that we learnt about ARIMA model in the first half of class[4]. I quickly test the validity of this approach. First collect the AIC value of different ARIMA model with different number of autoregressive components and moving average components.
+```{r}
+aic_table <- function(data ,P, Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P){
+    for(q in 0:Q){
+      table[p+1, q+1] <- arima(data,order=c(p,0,q))$aic
+    }
+  }
+  dimnames(table) <- list(paste("AR",0:P, sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+# search for optimal parameter
+eagle_aic <- aic_table(eagle_data$msa, 4,5)
+knitr::kable(eagle_aic)
+```
+
+
+It looks like ARIMA(3,0,5) is the best. I fit the model and check out the log likelihood of the model.
+```{r}
+arima_model <- arima(eagle_data$msa, c(3,0,5))
+arima_model$loglik
+```
+
+This is way smaller than the log likelihood of my POMP model. This shows that partial Markov Process is superior to ARIMA in this specific task.
 
 # Discussion
 
+In this project I am able to replicate the data analysis of a past ecological article using the `pomp` package in R. The algorithm is different from what the authors used, but I am able to achieve similar outcomes. Both my efforts and the article confirms that modelling an eagle's daily activity into active/inactive states is feasible. The eagle is mostly in an inactive state and might burst into active state for a short period once in a while. It's also noted that the probability of staying in /switching states varies with the wind speed of the eagle's environment. The higher the wind speed is, the more probable that the eagle might stay in the active state.
 
+Because of time constraints, I am not able to carry out extra computations that I would like to do. In this project I only took advantage of the data collected in a day while there are in total nine days of data. The heuristics that I take are potentially controversial. A typical example is how I select and fix the parameters for the measurement model. Profile likelihood methods should be introduced where necessary.
 
+# Side Notes
+
+All the major computations are coded up in standalone R scripts and run on the greatlakes clusters offered by University of Michigan high performace computing service. The access to the cluster is provided by Dr Edward Ionides, the instructor of STATS 531 "Analysis of Time Series".
+
+For the details of my code please refer to the [github repository](https://github.com/skybullbobby/Time-Series-Final-Project).
+
+# Reference
+
+[1]Dryad Digital Repository(how I access the data, [link](https://datadryad.org/))
+
+[2] Leos‐Barajas, V., Photopoulou, T., Langrock, R., Patterson, T.A., Watanabe, Y.Y., Murgatroyd, M. and Papastamatiou, Y.P. (2017), Analysis of animal accelerometer data using hidden Markov models. Methods Ecol Evol, 8: 161-173. doi:10.1111/2041-210X.12657
+
+[3] Wiley online library(how I access the article and its appendices, [link](https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.12657))
+
+[4] STATS 531 WN2020 ( [link](https://ionides.github.io/531w20/))
+
+[5] How to write R extensions from CRAN([link](https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Distribution-functions))
+
+[6] `pomp` package tutorial([link](https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Distribution-functions))
+
+[7] How to calculate stationary distribution from a transitional probability matrix([link](https://stephens999.github.io/fiveMinuteStats/stationary_distribution.html))
 
